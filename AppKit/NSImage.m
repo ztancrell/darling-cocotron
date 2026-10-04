@@ -1419,6 +1419,14 @@ static NSUInteger scaledRepCacheBytes(NSArray *cache) {
     return _drawingHandlerRepCache;
 }
 
+// The whole image, composited over the destination at full opacity.
+- (void) drawInRect: (NSRect) rect {
+    [self drawInRect: rect
+            fromRect: NSZeroRect
+           operation: NSCompositeSourceOver
+            fraction: 1.0];
+}
+
 - (void) drawInRect: (NSRect) rect
            fromRect: (NSRect) source
           operation: (NSCompositingOperation) operation
