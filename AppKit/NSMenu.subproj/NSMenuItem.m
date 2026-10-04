@@ -160,6 +160,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
     [_identifier release];
     [_actionImage release];
     [_toolTip release];
+    [_view release];
     [super dealloc];
 }
 
@@ -369,6 +370,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
     image = [image retain];
     [_image release];
     _image = image;
+}
+
+// Stored and returned only: menus do not draw an item's custom view.
+- (NSView *) view {
+    return _view;
+}
+
+- (void) setView: (NSView *) view {
+    view = [view retain];
+    [_view release];
+    _view = view;
 }
 
 - (void) setOnStateImage: (NSImage *) image {

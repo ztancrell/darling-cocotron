@@ -48,6 +48,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #endif
 }
 - (NSStatusBar *) statusBar;
+- (id) button;
 
 - (SEL) action;
 - (void) setAction: (SEL) action;

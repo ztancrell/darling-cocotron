@@ -276,6 +276,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
     return [NSStatusBar systemStatusBar];
 }
 
+// There is no status bar to host one, so there is no button.
+- (id) button {
+    return nil;
+}
+
 - (SEL) action {
     return _action;
 }

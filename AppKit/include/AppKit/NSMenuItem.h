@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <Foundation/NSObject.h>
 #import <AppKit/NSUserInterfaceItemIdentification.h>
 
-@class NSMenu, NSImage, NSAttributedString;
+@class NSMenu, NSImage, NSAttributedString, NSView;
 
 @interface NSMenuItem : NSObject <NSCopying, NSValidatedUserInterfaceItem, NSUserInterfaceItemIdentification> {
     NSMenu *_menu;
@@ -51,6 +51,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
     NSImage *_actionImage;
     BOOL _isSectionHeader;
     NSString *_toolTip;
+    NSView *_view;
 }
 
 @property(copy) NSString *toolTip;
@@ -105,6 +106,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 - (void) setKeyEquivalent: (NSString *) keyEquivalent;
 - (void) setKeyEquivalentModifierMask: (unsigned) mask;
 - (void) setImage: (NSImage *) image;
+- (NSView *) view;
+- (void) setView: (NSView *) view;
 - (void) setOnStateImage: (NSImage *) image;
 - (void) setOffStateImage: (NSImage *) image;
 - (void) setMixedStateImage: (NSImage *) image;
