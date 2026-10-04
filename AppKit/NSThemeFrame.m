@@ -132,27 +132,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
     [contentView setFrame: contentFrame];
 }
 
+// ponytail: an unhandled click goes on to the window, as on macOS, and dragging a window that is
+// movableByWindowBackground is not implemented. The drag loop that was here swallowed the
+// mouse-down and mouse-up, so an NSWindow subclass handling them never saw a click, and it moved
+// the window even with no mouse movement. Full behaviour: forward the click, and start a drag
+// only once the mouse moves, without consuming the mouse-up.
 - (void) mouseDown: (NSEvent *) event {
-    if (![[self window] isMovableByWindowBackground])
-        return;
-
-    NSPoint origin = [[self window] frame].origin;
-    NSPoint firstLocation =
-            [[self window] convertBaseToScreen: [event locationInWindow]];
-    do {
-        event = [[self window] nextEventMatchingMask: NSLeftMouseUpMask |
-                                                      NSLeftMouseDraggedMask];
-
-        NSPoint delta =
-                [[self window] convertBaseToScreen: [event locationInWindow]];
-
-        delta.x -= firstLocation.x;
-        delta.y -= firstLocation.y;
-
-        [[self window] setFrameOrigin: NSMakePoint(origin.x + delta.x,
-                                                   origin.y + delta.y)];
-
-    } while ([event type] != NSLeftMouseUp);
+    [super mouseDown: event];
 }
 
 @end
