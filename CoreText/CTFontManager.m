@@ -6,16 +6,29 @@
 
 const CFStringRef kCTFontManagerRegisteredFontsChangedNotification = CFSTR("CTFontManagerFontChangedNotification");
 
+// ponytail: reports success without registering anything, so the font is not findable by name and
+// lookups for it get whatever fontconfig matches instead. Returning false here needs a real
+// CFError in *error (callers read it uninitialized otherwise). Real fix: keep registered CGFonts
+// where O2Font's name lookup can find them.
+static bool pretendGraphicsFontRegistration(NSString *action, CGFontRef font, CFErrorRef *error)
+{
+    CFStringRef name = font ? CGFontCopyPostScriptName(font) : NULL;
+    NSLog(@"CTFontManager: %@ is not implemented. Reporting success without doing it for font \"%@\" (%p); "
+          @"lookups by that name will get a fontconfig fallback.",
+          action, name ? (NSString *)name : @"(no name)", font);
+    if (name) CFRelease(name);
+    if (error) *error = NULL;
+    return true;
+}
+
 bool CTFontManagerRegisterGraphicsFont(CGFontRef font, CFErrorRef* error)
 {
-    printf("STUB %s\n", __PRETTY_FUNCTION__);
-    return nil;
+    return pretendGraphicsFontRegistration(@"CTFontManagerRegisterGraphicsFont", font, error);
 }
 
 bool CTFontManagerUnregisterGraphicsFont(CGFontRef font, CFErrorRef *error)
 {
-    printf("STUB %s\n", __PRETTY_FUNCTION__);
-    return nil;
+    return pretendGraphicsFontRegistration(@"CTFontManagerUnregisterGraphicsFont", font, error);
 }
 
 CFArrayRef CTFontManagerCopyAvailableFontFamilyNames(void)
