@@ -44,6 +44,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <AppKit/NSWorkspace.h>
 #import <CoreGraphics/CGWindowPrivate.h>
 #import <objc/message.h>
+#import <objc/runtime.h>
 #import <pthread.h>
 #import <stdatomic.h>
 
@@ -227,7 +228,7 @@ NSApplication *NSApp = nil;
 }
 
 - delegate {
-    return _delegate;
+    return objc_loadWeak(&_delegate);
 }
 
 - (NSArray *) windows {
@@ -357,76 +358,24 @@ NSApplication *NSApp = nil;
     NSUnimplementedMethod();
 }
 
-- (void) unregisterDelegate {
-    if ([_delegate respondsToSelector: @selector
-                   (applicationWillFinishLaunching:)]) {
-        [[NSNotificationCenter defaultCenter]
-                removeObserver: _delegate
-                          name: NSApplicationWillFinishLaunchingNotification
-                        object: self];
-    }
-    if ([_delegate respondsToSelector: @selector
-                   (applicationDidFinishLaunching:)]) {
-        [[NSNotificationCenter defaultCenter]
-                removeObserver: _delegate
-                          name: NSApplicationDidFinishLaunchingNotification
-                        object: self];
-    }
-    if ([_delegate
-                respondsToSelector: @selector(applicationDidBecomeActive:)]) {
-        [[NSNotificationCenter defaultCenter]
-                removeObserver: _delegate
-                          name: NSApplicationDidBecomeActiveNotification
-                        object: self];
-    }
-    if ([_delegate respondsToSelector: @selector(applicationWillTerminate:)]) {
-        [[NSNotificationCenter defaultCenter]
-                removeObserver: _delegate
-                          name: NSApplicationWillTerminateNotification
-                        object: self];
-    }
-}
-
-- (void) registerDelegate {
-    if ([_delegate respondsToSelector: @selector
-                   (applicationWillFinishLaunching:)]) {
-        [[NSNotificationCenter defaultCenter]
-                addObserver: _delegate
-                   selector: @selector(applicationWillFinishLaunching:)
-                       name: NSApplicationWillFinishLaunchingNotification
-                     object: self];
-    }
-    if ([_delegate respondsToSelector: @selector
-                   (applicationDidFinishLaunching:)]) {
-        [[NSNotificationCenter defaultCenter]
-                addObserver: _delegate
-                   selector: @selector(applicationDidFinishLaunching:)
-                       name: NSApplicationDidFinishLaunchingNotification
-                     object: self];
-    }
-    if ([_delegate
-                respondsToSelector: @selector(applicationDidBecomeActive:)]) {
-        [[NSNotificationCenter defaultCenter]
-                addObserver: _delegate
-                   selector: @selector(applicationDidBecomeActive:)
-                       name: NSApplicationDidBecomeActiveNotification
-                     object: self];
-    }
-    if ([_delegate respondsToSelector: @selector(applicationWillTerminate:)]) {
-        [[NSNotificationCenter defaultCenter]
-                addObserver: _delegate
-                   selector: @selector(applicationWillTerminate:)
-                       name: NSApplicationWillTerminateNotification
-                     object: self];
-    }
-}
-
+// The delegate is held weakly, as on macOS: an application may free its delegate before
+// installing another. _delegate must only be touched through the weak API below.
 - (void) setDelegate: delegate {
-    if (delegate != _delegate) {
-        [self unregisterDelegate];
-        _delegate = delegate;
-        [self registerDelegate];
-    }
+    objc_storeWeak(&_delegate, delegate);
+}
+
+// The delegate is told directly rather than registered as an observer: an observer entry for a
+// delegate that has since been freed could not be removed, and would be messaged on the next post.
+- (void) _postNotificationName: (NSNotificationName) name
+              delegateSelector: (SEL) selector
+{
+    NSNotification *note = [NSNotification notificationWithName: name
+                                                         object: self];
+    id delegate = [self delegate];
+
+    if ([delegate respondsToSelector: selector])
+        [delegate performSelector: selector withObject: note];
+    [[NSNotificationCenter defaultCenter] postNotification: note];
 }
 
 - (void) setMainMenu: (NSMenu *) menu {
@@ -607,15 +556,15 @@ NSApplication *NSApp = nil;
     }
 
     if ([openFiles count] == 1 &&
-        [_delegate respondsToSelector: @selector(application:openFile:)]) {
-        opened = [_delegate application: self openFile: [openFiles lastObject]];
-    } else if ([_delegate respondsToSelector: @selector(application:
+        [[self delegate] respondsToSelector: @selector(application:openFile:)]) {
+        opened = [[self delegate] application: self openFile: [openFiles lastObject]];
+    } else if ([[self delegate] respondsToSelector: @selector(application:
                                                           openFiles:)]) {
-        [_delegate application: self openFiles: openFiles];
+        [[self delegate] application: self openFiles: openFiles];
         opened = YES;
     } else {
-        id target = _delegate;
-        if (![_delegate respondsToSelector: @selector(application:openFile:)]) {
+        id target = [self delegate];
+        if (![[self delegate] respondsToSelector: @selector(application:openFile:)]) {
             target = [NSDocumentController sharedDocumentController];
         }
         for (NSString *aFile in openFiles) {
@@ -631,9 +580,8 @@ NSApplication *NSApp = nil;
     NSAutoreleasePool *pool = [NSAutoreleasePool new];
     BOOL needsUntitled = YES;
 
-    NS_DURING [[NSNotificationCenter defaultCenter]
-            postNotificationName: NSApplicationWillFinishLaunchingNotification
-                          object: self];
+    NS_DURING [self _postNotificationName: NSApplicationWillFinishLaunchingNotification
+                  delegateSelector: @selector(applicationWillFinishLaunching:)];
     NS_HANDLER [self reportException: localException];
     NS_ENDHANDLER
 
@@ -665,16 +613,16 @@ NSApplication *NSApp = nil;
         needsUntitled = NO;
     }
 
-    if (needsUntitled && _delegate &&
-        [_delegate respondsToSelector: @selector
+    if (needsUntitled && [self delegate] &&
+        [[self delegate] respondsToSelector: @selector
                    (applicationShouldOpenUntitledFile:)]) {
-        needsUntitled = [_delegate applicationShouldOpenUntitledFile: self];
+        needsUntitled = [[self delegate] applicationShouldOpenUntitledFile: self];
     }
 
-    if (needsUntitled && _delegate &&
-        [_delegate
+    if (needsUntitled && [self delegate] &&
+        [[self delegate]
                 respondsToSelector: @selector(applicationOpenUntitledFile:)]) {
-        needsUntitled = ![_delegate applicationOpenUntitledFile: self];
+        needsUntitled = ![[self delegate] applicationOpenUntitledFile: self];
     }
 
     if (needsUntitled && controller &&
@@ -687,9 +635,8 @@ NSApplication *NSApp = nil;
         [controller newDocument: self];
     }
 
-    NS_DURING [[NSNotificationCenter defaultCenter]
-            postNotificationName: NSApplicationDidFinishLaunchingNotification
-                          object: self];
+    NS_DURING [self _postNotificationName: NSApplicationDidFinishLaunchingNotification
+                  delegateSelector: @selector(applicationDidFinishLaunching:)];
     NS_HANDLER [self reportException: localException];
     NS_ENDHANDLER
 
@@ -739,8 +686,8 @@ NSApplication *NSApp = nil;
     }
 
     BOOL shouldTerminate = NO;
-    if ([_delegate respondsToSelector: @selector(applicationShouldTerminateAfterLastWindowClosed:)]) {
-        shouldTerminate = [_delegate applicationShouldTerminateAfterLastWindowClosed: self];
+    if ([[self delegate] respondsToSelector: @selector(applicationShouldTerminateAfterLastWindowClosed:)]) {
+        shouldTerminate = [[self delegate] applicationShouldTerminateAfterLastWindowClosed: self];
     } else {
         NSString *env = [[[NSProcessInfo processInfo] environment] objectForKey: @"DARLING_QUIT_ON_LAST_WINDOW"];
         if (env != nil) {
@@ -1408,8 +1355,8 @@ NSApplication *NSApp = nil;
 }
 
 - (void) terminate: sender {
-    if ([_delegate respondsToSelector: @selector(applicationShouldTerminate:)]) {
-        NSApplicationTerminateReply reply = [_delegate applicationShouldTerminate: self];
+    if ([[self delegate] respondsToSelector: @selector(applicationShouldTerminate:)]) {
+        NSApplicationTerminateReply reply = [[self delegate] applicationShouldTerminate: self];
         if (reply == NSTerminateCancel) {
             return;
         }
@@ -1436,10 +1383,10 @@ NSApplication *NSApp = nil;
 {
     // callback method for terminate:
     if (didCloseAll) {
-        if ([_delegate
+        if ([[self delegate]
                     respondsToSelector: @selector(applicationShouldTerminate:)])
             [self replyToApplicationShouldTerminate:
-                            [_delegate applicationShouldTerminate: self] ==
+                            [[self delegate] applicationShouldTerminate: self] ==
                             NSTerminateNow];
         else
             [self replyToApplicationShouldTerminate: YES];
@@ -1448,9 +1395,8 @@ NSApplication *NSApp = nil;
 
 - (void) replyToApplicationShouldTerminate: (BOOL) terminate {
     if (terminate == YES) {
-        [[NSNotificationCenter defaultCenter]
-                postNotificationName: NSApplicationWillTerminateNotification
-                              object: self];
+        [self _postNotificationName: NSApplicationWillTerminateNotification
+                  delegateSelector: @selector(applicationWillTerminate:)];
 
         [NSClassFromString(@"Win32RunningCopyPipe")
                 performSelector: @selector(invalidateRunningCopyPipe)];
@@ -1659,8 +1605,8 @@ static _Atomic long relaunchOnLoginDisableCount;
 }
 
 - (void) doCommandBySelector: (SEL) selector {
-    if ([_delegate respondsToSelector: selector])
-        [_delegate performSelector: selector withObject: nil];
+    if ([[self delegate] respondsToSelector: selector])
+        [[self delegate] performSelector: selector withObject: nil];
     else
         [super doCommandBySelector: selector];
 }
@@ -1682,9 +1628,8 @@ static _Atomic long relaunchOnLoginDisableCount;
 
 - (void) _windowDidBecomeActive: (NSWindow *) window {
     if (![self isActiveExcludingWindow: window]) {
-        [[NSNotificationCenter defaultCenter]
-                postNotificationName: NSApplicationDidBecomeActiveNotification
-                              object: self];
+        [self _postNotificationName: NSApplicationDidBecomeActiveNotification
+                  delegateSelector: @selector(applicationDidBecomeActive:)];
     }
 }
 
@@ -1727,9 +1672,9 @@ static _Atomic long relaunchOnLoginDisableCount;
 // private method called when the application is reopened
 - (void) _reopen {
     BOOL doReopen = YES;
-    if ([_delegate respondsToSelector: @selector
+    if ([[self delegate] respondsToSelector: @selector
                    (applicationShouldHandleReopen:hasVisibleWindows:)])
-        doReopen = [_delegate applicationShouldHandleReopen: self
+        doReopen = [[self delegate] applicationShouldHandleReopen: self
                                           hasVisibleWindows: !_isHidden];
     if (!doReopen)
         return;
