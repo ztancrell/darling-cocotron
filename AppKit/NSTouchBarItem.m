@@ -106,3 +106,7 @@ NSTouchBarItemIdentifier const NSTouchBarItemIdentifierCharacterPicker =
 }
 
 @end
+
+// Needed at load by Electron Framework (Riot Client).
+NSTouchBarItemIdentifier const NSTouchBarItemIdentifierCandidateList =
+        @"NSTouchBarItemIdentifierCandidateList";

@@ -57,4 +57,9 @@
     return name ? name : [[NSProcessInfo processInfo] processName];
 }
 
+// Activating another application is not implemented.
+- (BOOL) activateWithOptions: (NSUInteger) options {
+    return NO;
+}
+
 @end

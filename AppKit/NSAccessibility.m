@@ -650,3 +650,6 @@ void NSAccessibilityPostNotificationWithUserInfo(id element,
 {
     printf("STUB %s\n", __PRETTY_FUNCTION__);
 }
+
+// Needed at load by Electron Framework (Riot Client).
+NSString *const NSAccessibilityRequiredAttribute = @"AXRequired";

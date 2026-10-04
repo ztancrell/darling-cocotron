@@ -60,3 +60,7 @@
 }
 
 @end
+
+// Present so that binaries referencing the class load; there is no Touch Bar to show it in.
+@implementation NSScrubberImageItemView
+@end

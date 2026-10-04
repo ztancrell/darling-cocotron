@@ -533,4 +533,19 @@ BOOL itemIsEnabled(NSMenuItem *item) {
     return nil;
 }
 
+// Private layout hint; menus here have no padding to adjust.
+- (void) _setHasPadding: (BOOL) hasPadding onEdge: (NSInteger) edge {
+}
+
+// Nothing to cancel: a menu is not tracked asynchronously here.
+- (void) cancelTracking {
+}
+
+- (void) performActionForItemAtIndex: (NSInteger) index {
+    NSMenuItem *item = [self itemAtIndex: index];
+
+    if ([item isEnabled])
+        [NSApp sendAction: [item action] to: [item target] from: item];
+}
+
 @end
