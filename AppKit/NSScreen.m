@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <AppKit/NSApplication.h>
 #import <AppKit/NSDisplay.h>
 #import <AppKit/NSScreen.h>
+#import <AppKit/NSColorSpace.h>
 #import <AppKit/NSWindow.h>
 
 NSNotificationName const NSScreenColorSpaceDidChangeNotification = @"NSScreenColorSpaceDidChangeNotification";
@@ -109,6 +110,19 @@ NSNotificationName const NSScreenColorSpaceDidChangeNotification = @"NSScreenCol
 
 - (void) setCgDirectDisplayID: (CGDirectDisplayID) displayID {
     self->_directDisplayID = displayID;
+}
+
+// Standard dynamic range only: 1.0 means no headroom above SDR white.
+- (CGFloat) maximumExtendedDynamicRangeColorComponentValue {
+    return 1.0;
+}
+
+- (CGFloat) maximumPotentialExtendedDynamicRangeColorComponentValue {
+    return 1.0;
+}
+
+- (NSColorSpace *) colorSpace {
+    return [NSColorSpace sRGBColorSpace];
 }
 
 @end

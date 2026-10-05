@@ -1851,3 +1851,18 @@ BOOL NSPerformService(NSString *itemName, NSPasteboard *pasteboard) {
 }
 
 @end
+
+/* ---- Darling: local discovery placeholders, NOT implementations ----
+ * Each logs its own name when called and returns zero, so one run shows which of these an
+ * application actually reaches. Replace each with a real implementation, or remove it. */
+#include <stdio.h>
+#ifndef DARLING_UNIMPLEMENTED
+#define DARLING_UNIMPLEMENTED(sym) \
+	__attribute__((visibility("default"))) long darling_unimplemented_##sym(void) __asm__("_" #sym); \
+	long darling_unimplemented_##sym(void) { fprintf(stderr, "DARLING unimplemented function called: " #sym "\n"); return 0; }
+#endif
+DARLING_UNIMPLEMENTED(_NSAppendToKillRing)
+DARLING_UNIMPLEMENTED(_NSInitializeKillRing)
+DARLING_UNIMPLEMENTED(_NSNewKillRingSequence)
+DARLING_UNIMPLEMENTED(_NSSetKillRingToYankedState)
+DARLING_UNIMPLEMENTED(_NSYankFromKillRing)
