@@ -355,6 +355,11 @@ NSNotificationName const NSSystemColorsDidChangeNotification = @"NSSystemColorsD
                                colorName: @"alternateSelectedControlColor"];
 }
 
+// There is no accent colour setting; this is the default accent of macOS.
++ (NSColor *) controlAccentColor {
+    return [NSColor systemBlueColor];
+}
+
 + (NSColor *) alternateSelectedControlTextColor {
     return [NSColor colorWithCatalogName: @"System"
                                colorName: @"alternateSelectedControlTextColor"];

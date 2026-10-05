@@ -160,6 +160,7 @@ typedef NS_ENUM(NSInteger, NSColorType) {
 + (NSColor *) gridColor;
 
 + (NSColor *) alternateSelectedControlColor;
++ (NSColor *) controlAccentColor;
 + (NSColor *) alternateSelectedControlTextColor;
 + (NSColor *) controlColor;
 + (NSColor *) secondarySelectedControlColor;
