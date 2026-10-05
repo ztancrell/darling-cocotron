@@ -691,6 +691,12 @@ bool CGDisplayUsesForceToGray(void) {
     return false;
 }
 
+// Whether this process may record the screen, asked without prompting the user. There is no
+// screen capture here to grant access to.
+bool CGPreflightScreenCaptureAccess(void) {
+    return false;
+}
+
 /* ---- Darling: local discovery placeholders, NOT implementations ----
  * Each logs its own name when called and returns zero, so one run shows which of these an
  * application actually reaches. Replace each with a real implementation, or remove it. */

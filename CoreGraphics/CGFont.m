@@ -155,3 +155,9 @@ bool CGFontGetGlyphBBoxes(CGFontRef self, const CGGlyph *glyphs, size_t count, C
     }
     return true;
 }
+
+// Whether LCD (subpixel) font smoothing is turned off. Onyx2D only ever draws grayscale
+// antialiased text, so it is.
+bool CGFontRenderingGetFontSmoothingDisabled(void) {
+    return true;
+}
