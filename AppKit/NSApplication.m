@@ -1354,6 +1354,11 @@ NSApplication *NSApp = nil;
     _isRunning = NO;
 }
 
+// There is no Full Keyboard Access setting.
+- (BOOL) isFullKeyboardAccessEnabled {
+    return NO;
+}
+
 - (void) terminate: sender {
     if ([[self delegate] respondsToSelector: @selector(applicationShouldTerminate:)]) {
         NSApplicationTerminateReply reply = [[self delegate] applicationShouldTerminate: self];
