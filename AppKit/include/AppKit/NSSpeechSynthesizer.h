@@ -54,6 +54,7 @@ APPKIT_EXPORT NSSpeechPropertyKey const NSSpeechVolumeProperty;
 // whatever happened to be in the return register.
 + (NSArray *) availableVoices;
 + (NSString *) voiceAtIndex: (NSInteger) index;
++ (NSDictionary *) attributesForVoice: (NSString *) voiceIdentifier;
 - (NSDictionary *) attributesForVoice: (NSString *) voiceIdentifier;
 - (instancetype) initWithVoice: (NSString *) voice;
 @property (nonatomic, readonly) NSString *voice;

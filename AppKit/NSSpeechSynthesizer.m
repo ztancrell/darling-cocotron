@@ -43,9 +43,14 @@ NSSpeechPropertyKey const NSSpeechVolumeProperty = @"volm";
     return nil;
 }
 
-- (NSDictionary *) attributesForVoice: (NSString *) voiceIdentifier
++ (NSDictionary *) attributesForVoice: (NSString *) voiceIdentifier
 {
     return @{};
+}
+
+- (NSDictionary *) attributesForVoice: (NSString *) voiceIdentifier
+{
+    return [[self class] attributesForVoice: voiceIdentifier];
 }
 
 - (instancetype) initWithVoice: (NSString *) voice
@@ -60,6 +65,12 @@ NSSpeechPropertyKey const NSSpeechVolumeProperty = @"volm";
 - (NSString *) voice
 {
     return _voice;
+}
+
+- (void) dealloc
+{
+    [_voice release];
+    [super dealloc];
 }
 
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
