@@ -31,7 +31,38 @@ NSSpeechPropertyKey const NSSpeechRateProperty = @"rate";
 NSSpeechPropertyKey const NSSpeechPitchBaseProperty = @"pbas";
 NSSpeechPropertyKey const NSSpeechVolumeProperty = @"volm";
 
-@implementation NSSpeechSynthesizer
+@implementation NSSpeechSynthesizer {
+    NSString *_voice;
+}
+
++ (NSArray *) availableVoices
+{
+    return @[];
+}
+
++ (NSString *) voiceAtIndex: (NSInteger) index
+{
+    return nil;
+}
+
+- (NSDictionary *) attributesForVoice: (NSString *) voiceIdentifier
+{
+    return @{};
+}
+
+- (instancetype) initWithVoice: (NSString *) voice
+{
+    self = [super init];
+    if (self != nil) {
+        _voice = [voice copy];
+    }
+    return self;
+}
+
+- (NSString *) voice
+{
+    return _voice;
+}
 
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
 {
@@ -41,6 +72,20 @@ NSSpeechPropertyKey const NSSpeechVolumeProperty = @"volm";
 - (void)forwardInvocation:(NSInvocation *)anInvocation
 {
     NSLog(@"Stub called: %@ in %@", NSStringFromSelector([anInvocation selector]), [self class]);
+}
+
+// The catch-all above only covers instance methods, so an unimplemented *class* method was
+// fatal: Chess died in nib loading on +availableVoices, and any other app calling a missing
+// class method on this class dies the same way. Mirror the instance behaviour on the
+// metaclass so it logs instead of raising.
++ (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
+{
+    return [NSMethodSignature signatureWithObjCTypes: "v@:"];
+}
+
++ (void)forwardInvocation:(NSInvocation *)anInvocation
+{
+    NSLog(@"Stub called: %@ in %@ (class method)", NSStringFromSelector([anInvocation selector]), [self class]);
 }
 
 @end

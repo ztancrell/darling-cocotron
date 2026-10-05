@@ -19,6 +19,8 @@
 
 #import <AppKit/AppKitExport.h>
 #import <Foundation/NSObject.h>
+#import <Foundation/NSArray.h>
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSString.h>
 
 typedef NSString *NSVoiceGenderName;
@@ -40,6 +42,20 @@ APPKIT_EXPORT NSSpeechPropertyKey const NSSpeechPitchBaseProperty;
 APPKIT_EXPORT NSSpeechPropertyKey const NSSpeechVolumeProperty;
 
 @interface NSSpeechSynthesizer : NSObject
+
+// The voice query API. There is no speech synthesis engine here, so the voice list is
+// empty and per-voice lookups come back empty rather than reporting voices that cannot
+// speak.
+//
+// These return objects, which matters: the catch-all stub below answers every unimplemented
+// selector with a "v@:" signature, so an object-returning method left to it hands back
+// whatever happened to be in the return register.
++ (NSArray *) availableVoices;
++ (NSString *) voiceAtIndex: (NSInteger) index;
+- (NSDictionary *) attributesForVoice: (NSString *) voiceIdentifier;
+- (instancetype) initWithVoice: (NSString *) voice;
+@property (nonatomic, readonly) NSString *voice;
+
 @end
 
 @protocol NSSpeechSynthesizerDelegate <NSObject>
