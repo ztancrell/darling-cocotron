@@ -39,6 +39,9 @@ typedef NS_ENUM(NSInteger, NSColorType) {
 @class NSColorSpace;
 @class NSAppearance;
 
+// Also in NSCell.h, which imports this header.
+typedef NSUInteger NSControlTint;
+
 @interface NSColor : NSObject <NSCopying, NSCoding> {
     NSColorListName _catalogName;
     NSColorName _colorName;
@@ -161,6 +164,7 @@ typedef NS_ENUM(NSInteger, NSColorType) {
 
 + (NSColor *) alternateSelectedControlColor;
 + (NSColor *) controlAccentColor;
++ (NSControlTint) currentControlTint;
 + (NSColor *) alternateSelectedControlTextColor;
 + (NSColor *) controlColor;
 + (NSColor *) secondarySelectedControlColor;

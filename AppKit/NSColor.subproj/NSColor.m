@@ -18,6 +18,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 
 #import <AppKit/NSBezierPath.h>
+#import <AppKit/NSCell.h>
 #import <AppKit/NSColor.h>
 #import <AppKit/NSColorSpace.h>
 #import <AppKit/NSColor_CGColor.h>
@@ -353,6 +354,11 @@ NSNotificationName const NSSystemColorsDidChangeNotification = @"NSSystemColorsD
 + (NSColor *) alternateSelectedControlColor {
     return [NSColor colorWithCatalogName: @"System"
                                colorName: @"alternateSelectedControlColor"];
+}
+
+// No tint setting either; blue is the default and matches controlAccentColor.
++ (NSControlTint) currentControlTint {
+    return NSBlueControlTint;
 }
 
 // There is no accent colour setting; this is the default accent of macOS.

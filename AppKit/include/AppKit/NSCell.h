@@ -91,6 +91,12 @@ typedef NS_ENUM(NSUInteger, NSControlSize) {
 #define NSMiniControlSize NSControlSizeMini
 
 typedef NSUInteger NSControlTint;
+enum {
+    NSDefaultControlTint = 0,
+    NSBlueControlTint = 1,
+    NSGraphiteControlTint = 6,
+    NSClearControlTint = 7,
+};
 
 typedef NS_ENUM(NSInteger, NSBackgroundStyle) {
     NSBackgroundStyleLight = 0,
