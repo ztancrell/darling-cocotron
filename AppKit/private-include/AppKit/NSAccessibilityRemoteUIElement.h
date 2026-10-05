@@ -20,4 +20,9 @@
 #import <Foundation/Foundation.h>
 
 @interface NSAccessibilityRemoteUIElement : NSObject
++ (NSData *)remoteTokenForLocalUIElement:(id)element;
++ (void)registerRemoteUIProcessIdentifier:(pid_t)pid;
++ (BOOL)isRemoteUIApp;
++ (void)setRemoteUIApp:(BOOL)flag;
+- (instancetype)initWithRemoteToken:(NSData *)token;
 @end

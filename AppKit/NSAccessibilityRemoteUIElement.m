@@ -23,6 +23,34 @@
 
 @implementation NSAccessibilityRemoteUIElement
 
+// Accessibility does not cross processes in Darling: there is nothing that could resolve a
+// token. So no token is handed out, and an element made from one is inert.
+static BOOL remoteUIApp;
+
++ (NSData *)remoteTokenForLocalUIElement:(id)element
+{
+    return nil;
+}
+
++ (void)registerRemoteUIProcessIdentifier:(pid_t)pid
+{
+}
+
++ (BOOL)isRemoteUIApp
+{
+    return remoteUIApp;
+}
+
++ (void)setRemoteUIApp:(BOOL)flag
+{
+    remoteUIApp = flag;
+}
+
+- (instancetype)initWithRemoteToken:(NSData *)token
+{
+    return [super init];
+}
+
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
 {
     return [NSMethodSignature signatureWithObjCTypes: "v@:"];
