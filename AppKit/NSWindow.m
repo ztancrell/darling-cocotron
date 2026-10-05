@@ -2566,6 +2566,11 @@ static BOOL _allowsAutomaticWindowTabbing;
         break;
 
     case NSMouseMoved: {
+        // The mouse cannot be over a window that is off screen; this is an event that was
+        // queued while the window was still shown. Applications tear down what their
+        // handlers use when they order a window out.
+        if (!_isVisible)
+            break;
         NSView *hit = [_backgroundView hitTest: [event locationInWindow]];
         if (hit == nil || hit == _backgroundView)
             hit = _contentView;
