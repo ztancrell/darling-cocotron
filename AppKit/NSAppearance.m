@@ -60,12 +60,14 @@ static NSString *const NSAppearanceDrawingAppearanceKey = @"NSAppearanceCurrentD
 + (NSAppearance *) currentDrawingAppearance {
     NSAppearance *drawing =
             [[[NSThread currentThread] threadDictionary] objectForKey: NSAppearanceDrawingAppearanceKey];
+    // Callers save this, switch to another appearance and switch back; both setters release the
+    // one they replace, so the caller needs its own reference.
     if (drawing != nil)
-        return drawing;
+        return [[drawing retain] autorelease];
     if (!sCurrentAppearance) {
         sCurrentAppearance = [self appearanceNamed:NSAppearanceNameAqua];
     }
-    return sCurrentAppearance;
+    return [[sCurrentAppearance retain] autorelease];
 }
 
 + (NSAppearance *) currentAppearance {
