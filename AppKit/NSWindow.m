@@ -814,6 +814,8 @@ static BOOL _allowsAutomaticWindowTabbing;
             {NSWindowDidBecomeKeyNotification, @selector(windowDidBecomeKey:)},
             {NSWindowDidBecomeMainNotification,
              @selector(windowDidBecomeMain:)},
+            {NSWindowDidChangeOcclusionStateNotification,
+             @selector(windowDidChangeOcclusionState:)},
             {NSWindowDidDeminiaturizeNotification,
              @selector(windowDidDeminiaturize:)},
             {NSWindowDidMiniaturizeNotification,
@@ -2311,6 +2313,8 @@ static BOOL _allowsAutomaticWindowTabbing;
 - (void) orderWindow: (NSWindowOrderingMode) place
           relativeTo: (NSInteger) relativeTo
 {
+    NSWindowOcclusionState occlusionBefore = [self occlusionState];
+
     // The move notifications are sent under unknown conditions around
     // orderFront: in the Apple AppKit, we do them all the time here until it's
     // figured out. I suspect it is a side effect of off-screen windows being at
@@ -2367,6 +2371,14 @@ static BOOL _allowsAutomaticWindowTabbing;
     }
 
     [self postNotificationName: NSWindowDidMoveNotification];
+    [self _postOcclusionChangeFrom: occlusionBefore];
+}
+
+// Apps (Chromium) stop drawing a window's contents until told it is visible.
+- (void) _postOcclusionChangeFrom: (NSWindowOcclusionState) before {
+    if ([self occlusionState] != before)
+        [self postNotificationName:
+                        NSWindowDidChangeOcclusionStateNotification];
 }
 
 // Like macOS, ordering out the key window makes the frontmost remaining
@@ -2812,12 +2824,14 @@ static BOOL _allowsAutomaticWindowTabbing;
     if (_isVisible == visible) {
         return;
     }
+    NSWindowOcclusionState occlusionBefore = [self occlusionState];
     _isVisible = visible;
     if (visible) {
         [[self platformWindow] showWindowWithoutActivation];
     } else {
         [[self platformWindow] hideWindow];
     }
+    [self _postOcclusionChangeFrom: occlusionBefore];
 }
 
 - (void) orderFront: (id) sender {
@@ -3277,6 +3291,9 @@ static BOOL _allowsAutomaticWindowTabbing;
                                 relativeTo: [self windowNumber]];
     }
     [self postNotificationName: NSWindowDidDeminiaturizeNotification];
+    if (_isVisible)
+        [self postNotificationName:
+                        NSWindowDidChangeOcclusionStateNotification];
     [NSApp updateWindows];
 }
 
@@ -3289,6 +3306,9 @@ static BOOL _allowsAutomaticWindowTabbing;
     }
 
     [self postNotificationName: NSWindowDidMiniaturizeNotification];
+    if (_isVisible)
+        [self postNotificationName:
+                        NSWindowDidChangeOcclusionStateNotification];
 
     if ([self isKeyWindow]) {
         [self resignKeyWindow];
@@ -3874,8 +3894,7 @@ static BOOL _allowsAutomaticWindowTabbing;
 }
 
 // ponytail: a window that is on screen and not miniaturized counts as visible,
-// even when other windows cover it. X11 VisibilityNotify could refine this
-// (and post NSWindowDidChangeOcclusionStateNotification).
+// even when other windows cover it. X11 VisibilityNotify could refine this.
 - (NSWindowOcclusionState) occlusionState {
     return _isVisible && ![self isMiniaturized] ? NSWindowOcclusionStateVisible
                                                  : 0;
