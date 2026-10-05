@@ -736,9 +736,9 @@ static NSLock *_cacheLock = nil;
     return descriptor;
 }
 
+// There are no separate screen fonts here (see -screenFont), so every font is its own printer font.
 - (NSFont *) printerFont {
-    NSUnimplementedMethod();
-    return nil;
+    return self;
 }
 
 - (NSFont *) screenFont {
