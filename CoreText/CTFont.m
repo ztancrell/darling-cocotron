@@ -151,11 +151,15 @@ CTFontRef CTFontCreateWithNameAndOptions(CFStringRef name, CGFloat size,
     return CTFontCreateWithName(name, size, matrix);
 }
 
+extern const CFStringRef kDarlingCTFontGraphicsFontAttribute;
+
 CTFontRef CTFontCreateWithFontDescriptor(CTFontDescriptorRef descriptor, CGFloat size,
                                          const CGAffineTransform *matrix)
 {
     CFStringRef name = NULL;
+    CGFontRef carried = NULL;   // set for descriptors made from font data, see CTFontManager.m
     if (descriptor) {
+        carried = (CGFontRef)[(NSDictionary *)descriptor objectForKey:(id)kDarlingCTFontGraphicsFontAttribute];
         name = (CFStringRef)[(NSDictionary *)descriptor objectForKey:(id)kCTFontNameAttribute];
         if (!name) {
             name = (CFStringRef)[(NSDictionary *)descriptor objectForKey:(id)kCTFontFamilyNameAttribute];
@@ -167,7 +171,8 @@ CTFontRef CTFontCreateWithFontDescriptor(CTFontDescriptorRef descriptor, CGFloat
             }
         }
     }
-    CTFontRef result = CTFontCreateWithName(name ?: CFSTR("Helvetica"), size, matrix);
+    CTFontRef result = carried ? createFont(carried, size > 0.0 ? size : 12.0)
+                               : CTFontCreateWithName(name ?: CFSTR("Helvetica"), size, matrix);
     setFontCascade(result, [(NSDictionary *)descriptor objectForKey:(id)kCTFontCascadeListAttribute]);
     return result;
 }

@@ -1,6 +1,9 @@
 #import <CoreText/CTFontManager.h>
 #import <CoreText/CTFontDescriptor.h>
+#import <CoreGraphics/CGFont.h>
+#import <CoreGraphics/CGDataProvider.h>
 #import <Foundation/NSArray.h>
+#import <Foundation/NSDictionary.h>
 #import <Foundation/NSData.h>
 #import <Foundation/NSURL.h>
 
@@ -47,25 +50,38 @@ CFArrayRef CTFontManagerCopyAvailableFontFamilyNames(void)
     return (CFArrayRef)[families copy];
 }
 
-CFArrayRef CTFontManagerCreateFontDescriptorsFromData(CFDataRef data)
+// A descriptor made from font data carries the font itself under this private key, because a font
+// that exists only in memory cannot be found again by name (name lookup asks fontconfig, which
+// knows files on disk). CTFontCreateWithFontDescriptor uses the carried font when it is there.
+const CFStringRef kDarlingCTFontGraphicsFontAttribute = CFSTR("DarlingCTFontGraphicsFont");
+
+// ponytail: one descriptor per data blob; a font collection (.ttc) yields only its first face.
+CTFontDescriptorRef CTFontManagerCreateFontDescriptorFromData(CFDataRef data)
 {
-    if (!data) return (CFArrayRef)[[NSArray array] retain];
+    if (!data) return NULL;
     CGDataProviderRef provider = CGDataProviderCreateWithCFData(data);
-    if (!provider) return (CFArrayRef)[[NSArray array] retain];
+    if (!provider) return NULL;
     CGFontRef cgFont = CGFontCreateWithDataProvider(provider);
     CGDataProviderRelease(provider);
-    if (!cgFont) {
-        // Font data format could not be parsed by FreeType/Onyx2D
-        return (CFArrayRef)[[NSArray array] retain];
-    }
+    if (!cgFont) return NULL;   // not a font FreeType can read
+    NSMutableDictionary *attributes = [NSMutableDictionary dictionaryWithObject:(id)cgFont
+                                                                       forKey:(id)kDarlingCTFontGraphicsFontAttribute];
     CFStringRef name = CGFontCopyPostScriptName(cgFont);
-    CTFontDescriptorRef desc = CTFontDescriptorCreateWithNameAndSize(name, 0);
-    if (name) CFRelease(name);
+    if (name) {
+        attributes[(id)kCTFontNameAttribute] = (id)name;
+        CFRelease(name);
+    }
     CGFontRelease(cgFont);
+    return CTFontDescriptorCreateWithAttributes((CFDictionaryRef)attributes);
+}
+
+CFArrayRef CTFontManagerCreateFontDescriptorsFromData(CFDataRef data)
+{
+    CTFontDescriptorRef desc = CTFontManagerCreateFontDescriptorFromData(data);
     if (!desc) return (CFArrayRef)[[NSArray array] retain];
-    NSArray *result = [NSArray arrayWithObject:(id)desc];
+    NSArray *result = [[NSArray alloc] initWithObjects:(id)desc, nil];
     CFRelease(desc);
-    return (CFArrayRef)[result retain];
+    return (CFArrayRef)result;
 }
 
 // Synchronously loads font data from fontURL (local file or network URL).
@@ -95,4 +111,3 @@ bool CTFontManagerRegisterFontsForURL(CFURLRef fontURL, CTFontManagerScope scope
 #endif
 DARLING_UNIMPLEMENTED(CTFontDescriptorCopyLocalizedAttribute)
 DARLING_UNIMPLEMENTED(CTFontDescriptorIsSystemUIFont)
-DARLING_UNIMPLEMENTED(CTFontManagerCreateFontDescriptorFromData)
