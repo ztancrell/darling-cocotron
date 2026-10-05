@@ -29,6 +29,7 @@ typedef NSString *NSDeviceDescriptionKey;
     NSRect _frame;
     NSRect _visibleFrame;
     NSData *_edid;
+    NSString *_localizedName;
     CGDirectDisplayID _directDisplayID;
 }
 
@@ -48,10 +49,12 @@ typedef NSString *NSDeviceDescriptionKey;
 - (CGFloat) userSpaceScaleFactor;
 @property (readonly) CGFloat backingScaleFactor;
 
+@property(readonly, copy) NSString *localizedName;
 @end
 
 @interface NSScreen (Darling)
 - (NSData *) edid;
+- (void) setLocalizedName: (NSString *) name;
 - (void) setEdid: (NSData *) data;
 
 - (CGDirectDisplayID) cgDirectDisplayID;

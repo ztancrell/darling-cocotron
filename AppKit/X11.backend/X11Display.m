@@ -304,6 +304,8 @@ static void socketCallback(CFSocketRef s, CFSocketCallBackType type,
                 nsscreen = empty;
             }
             [nsscreen setCgDirectDisplayID: (i + 1)];
+            if (oinfo->name)
+                [nsscreen setLocalizedName: [NSString stringWithUTF8String: oinfo->name]];
 
             [retval addObject: nsscreen];
 

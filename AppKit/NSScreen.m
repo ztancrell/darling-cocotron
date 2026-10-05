@@ -37,6 +37,7 @@ NSNotificationName const NSScreenColorSpaceDidChangeNotification = @"NSScreenCol
 - (void) dealloc {
     if (_edid)
         [_edid release];
+    [_localizedName release];
     [super dealloc];
 }
 
@@ -96,6 +97,12 @@ NSNotificationName const NSScreenColorSpaceDidChangeNotification = @"NSScreenCol
     return self->_edid;
 }
 
+- (void) setLocalizedName: (NSString *) name {
+    NSString *old = self->_localizedName;
+    self->_localizedName = [name copy];
+    [old release];
+}
+
 - (void) setEdid: (NSData *) data {
     NSData *old = self->_edid;
     self->_edid = [data retain];
@@ -119,6 +126,11 @@ NSNotificationName const NSScreenColorSpaceDidChangeNotification = @"NSScreenCol
 
 - (CGFloat) maximumPotentialExtendedDynamicRangeColorComponentValue {
     return 1.0;
+}
+
+// The backend's name for the output (an X11 output is called e.g. "DP-1").
+- (NSString *) localizedName {
+    return _localizedName ? _localizedName : @"Display";
 }
 
 - (NSColorSpace *) colorSpace {
