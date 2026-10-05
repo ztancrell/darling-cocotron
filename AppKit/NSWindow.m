@@ -3864,6 +3864,23 @@ static BOOL _allowsAutomaticWindowTabbing;
     _toolbarStyle = style;
 }
 
+// Stored only: the title bar belongs to the X11 window manager.
+- (NSInteger) titleVisibility {
+    return _titleVisibility;
+}
+
+- (void) setTitleVisibility: (NSInteger) value {
+    _titleVisibility = value;
+}
+
+// ponytail: a window that is on screen and not miniaturized counts as visible,
+// even when other windows cover it. X11 VisibilityNotify could refine this
+// (and post NSWindowDidChangeOcclusionStateNotification).
+- (NSWindowOcclusionState) occlusionState {
+    return _isVisible && ![self isMiniaturized] ? NSWindowOcclusionStateVisible
+                                                 : 0;
+}
+
 - (BOOL) titlebarAppearsTransparent {
     return _titlebarAppearsTransparent;
 }

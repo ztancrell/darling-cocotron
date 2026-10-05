@@ -182,6 +182,10 @@ APPKIT_EXPORT const NSNotificationName NSWindowWillExitFullScreenNotification
 APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification
         NS_SWIFT_NAME(NSWindow.didExposeNotification);
 
+typedef NS_OPTIONS(NSUInteger, NSWindowOcclusionState) {
+    NSWindowOcclusionStateVisible = 1UL << 1,
+};
+
 @interface NSWindow : NSResponder <NSUserInterfaceItemIdentification, NSAccessibility, NSAppearanceCustomization> {
     NSRect _frame;
     NSWindowStyleMask _styleMask;
@@ -292,6 +296,7 @@ APPKIT_EXPORT const NSNotificationName NSWindowDidExposeNotification
     NSMutableArray *_titlebarAccessoryViewControllers;
     NSWindowToolbarStyle _toolbarStyle;
     BOOL _titlebarAppearsTransparent;
+    NSInteger _titleVisibility;
 }
 
 @property(class) BOOL allowsAutomaticWindowTabbing;
@@ -707,6 +712,9 @@ typedef NS_ENUM(NSUInteger, NSWindowTabbingMode) {
         (NSTitlebarAccessoryViewController *) controller;
 @property NSWindowToolbarStyle toolbarStyle;
 @property BOOL titlebarAppearsTransparent;
+- (NSInteger) titleVisibility;
+- (void) setTitleVisibility: (NSInteger) value;
+@property(readonly) NSWindowOcclusionState occlusionState;
 @end
 
 @interface NSWindow (Darling)
