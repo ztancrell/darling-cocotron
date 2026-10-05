@@ -82,6 +82,7 @@ typedef enum {
 - initWithDataProvider: (O2DataProviderRef) provider;
 
 - (NSData *) copyTableForTag: (uint32_t) tag;
+- (CFArrayRef) copyTableTags;
 
 - (O2Glyph) glyphWithGlyphName: (NSString *) name;
 - (NSString *) copyGlyphNameForGlyph: (O2Glyph) glyph;
@@ -122,6 +123,7 @@ O2Glyph O2FontGetGlyphWithGlyphName(O2FontRef self, CFStringRef name);
 NSString *O2FontCopyGlyphNameForGlyph(O2FontRef self, O2Glyph glyph);
 
 NSData *O2FontCopyTableForTag(O2FontRef self, uint32_t tag);
+CFArrayRef O2FontCopyTableTags(O2FontRef self);
 
 uint16_t O2FontUnicodeForGlyphName(CFStringRef name);
 

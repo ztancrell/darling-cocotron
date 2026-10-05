@@ -65,6 +65,11 @@ static NSArray *_preferredFontNames = nil;
     return nil;
 }
 
+// Tags as pointer-sized values in an array without callbacks, as CGFontCopyTableTags gives them.
+- (CFArrayRef) copyTableTags {
+    return NULL;
+}
+
 - (O2Glyph) glyphWithGlyphName: (NSString *) name {
     O2InvalidAbstractInvocation();
     return 0;
@@ -515,6 +520,10 @@ NSString *O2FontCopyGlyphNameForGlyph(O2FontRef self, O2Glyph glyph) {
 
 NSData *O2FontCopyTableForTag(O2FontRef self, uint32_t tag) {
     return [self copyTableForTag: (uint32_t) tag];
+}
+
+CFArrayRef O2FontCopyTableTags(O2FontRef self) {
+    return [self copyTableTags];
 }
 
 uint16_t O2FontUnicodeForGlyphName(CFStringRef name) {

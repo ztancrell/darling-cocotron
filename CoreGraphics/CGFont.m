@@ -130,7 +130,7 @@ CFStringRef const kCGFontVariationAxisDefaultValue = CFSTR("kCGFontVariationAxis
 CFStringRef const kCGFontVariationAxisMaxValue = CFSTR("kCGFontVariationAxisMaxValue");
 
 CFArrayRef CGFontCopyTableTags(CGFontRef font) {
-    return NULL;
+    return O2FontCopyTableTags(font);
 }
 
 CGFontRef CGFontCreateCopyWithVariations(CGFontRef self, CFDictionaryRef variations) {

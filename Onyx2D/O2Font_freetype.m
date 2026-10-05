@@ -2,6 +2,7 @@
 #ifdef FREETYPE_PRESENT
 #import <Onyx2D/O2Encoding.h>
 #import <string.h>
+#include FT_TRUETYPE_TABLES_H
 
 @implementation O2Font_freetype
 
@@ -315,6 +316,40 @@ O2FontRef O2FontCreateWithCodePointCoverage(const uint32_t *codePoints,
 
 - (FT_Face) face {
     return _face;
+}
+
+- (CFArrayRef) copyTableTags {
+    if (_face == NULL)
+        return NULL;
+    @synchronized(self) {
+        FT_ULong count = 0, tag, length;
+        // With a NULL tag pointer FreeType reports the number of tables in the length argument.
+        if (FT_Sfnt_Table_Info(_face, 0, NULL, &count) != 0)
+            return NULL;
+        CFMutableArrayRef tags = CFArrayCreateMutable(kCFAllocatorDefault, count, NULL);
+        for (FT_ULong i = 0; i < count; i++) {
+            if (FT_Sfnt_Table_Info(_face, i, &tag, &length) == 0)
+                CFArrayAppendValue(tags, (const void *) (uintptr_t) tag);
+        }
+        return tags;
+    }
+}
+
+// nil when the font has no such table (or is not an SFNT font at all), as on macOS.
+- (NSData *) copyTableForTag: (uint32_t) tag {
+    if (_face == NULL)
+        return nil;
+    @synchronized(self) {
+        FT_ULong length = 0;
+        if (FT_Load_Sfnt_Table(_face, tag, 0, NULL, &length) != 0 || length == 0)
+            return nil;
+        NSMutableData *table = [[NSMutableData alloc] initWithLength: length];
+        if (FT_Load_Sfnt_Table(_face, tag, 0, [table mutableBytes], &length) != 0) {
+            [table release];
+            return nil;
+        }
+        return table;
+    }
 }
 
 - (NSCharacterSet *) coveredCharacterSet {
