@@ -3895,9 +3895,15 @@ static BOOL _allowsAutomaticWindowTabbing;
 
 // ponytail: a window that is on screen and not miniaturized counts as visible,
 // even when other windows cover it. X11 VisibilityNotify could refine this.
+// macOS always sets an undocumented bit (8192) as well: a visible window reports
+// 8194, never exactly NSWindowOcclusionStateVisible. Electron's isVisible()
+// depends on that (it takes "== Visible" to mean occluded).
 - (NSWindowOcclusionState) occlusionState {
-    return _isVisible && ![self isMiniaturized] ? NSWindowOcclusionStateVisible
-                                                 : 0;
+    NSWindowOcclusionState state = 8192;
+
+    if (_isVisible && ![self isMiniaturized])
+        state |= NSWindowOcclusionStateVisible;
+    return state;
 }
 
 - (BOOL) titlebarAppearsTransparent {
