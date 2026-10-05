@@ -69,10 +69,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 
 - (void) beep;
 
-- (NSSet *) allFontFamilyNames;
-- (NSArray<NSFontTypeface *> *) fontTypefacesForFamilyName: (NSString *) name;
+// Class methods: font listing needs no window server connection.
++ (NSSet *) allFontFamilyNames;
++ (NSArray<NSFontTypeface *> *) fontTypefacesForFamilyName: (NSString *) name;
 // nil when no installed family is configured for the generic family.
-- (NSString *) fontFamilyNameForGenericFamily: (NSString *) generic;
++ (NSString *) fontFamilyNameForGenericFamily: (NSString *) generic;
 
 - (CGFloat) scrollerWidth;
 

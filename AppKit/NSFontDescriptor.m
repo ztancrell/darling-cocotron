@@ -225,7 +225,7 @@ static NSString *const NSFontUIFontDesignTrait = @"NSCTFontUIFontDesignTrait";
 
     NSString *family = systemFamily;
     if (generic != nil) {
-        family = [[NSDisplay currentDisplay] fontFamilyNameForGenericFamily: generic];
+        family = [NSDisplay fontFamilyNameForGenericFamily: generic];
         if (family == nil) {
             return nil;
         }

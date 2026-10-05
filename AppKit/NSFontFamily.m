@@ -78,7 +78,7 @@ static NSMutableDictionary *sharedByName = nil;
 }
 
 + (void) buildFontFamilies {
-    NSSet *initialFamilyNames = [[NSDisplay currentDisplay] allFontFamilyNames];
+    NSSet *initialFamilyNames = [NSDisplay allFontFamilyNames];
     for (NSString *familyName in initialFamilyNames) {
         [self addFontFamilyWithName: familyName];
     }
@@ -168,7 +168,7 @@ static NSMutableDictionary *sharedByName = nil;
         @synchronized(self) {
             if (!_typefacesLoaded) {
                 NSArray *typefaces =
-                        [[NSDisplay currentDisplay] fontTypefacesForFamilyName: _name];
+                        [NSDisplay fontTypefacesForFamilyName: _name];
                 if (typefaces != nil)
                     [_typefaces addObjectsFromArray: typefaces];
                 _typefacesLoaded = YES;
