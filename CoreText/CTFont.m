@@ -310,10 +310,23 @@ CTFontRef CTFontCreateForStringWithLanguage(CTFontRef currentFont, CFStringRef s
     return result;
 }
 
+// The descriptor carries the font's own graphics font (see kDarlingCTFontGraphicsFontAttribute in
+// CTFontManager.m), so a font made from it is this face again, also for fonts that exist only in memory.
 CTFontDescriptorRef CTFontCopyFontDescriptor(CTFontRef font)
 {
-    printf("STUB %s\n", __PRETTY_FUNCTION__);
-    return nil;
+    extern const CFStringRef kDarlingCTFontGraphicsFontAttribute;
+    CGFontRef cgFont = font ? graphicsFont(font) : NULL;
+    if (cgFont == NULL)
+        return NULL;
+    NSMutableDictionary *attributes = [NSMutableDictionary dictionary];
+    attributes[(id)kDarlingCTFontGraphicsFontAttribute] = (id)cgFont;
+    attributes[(id)kCTFontSizeAttribute] = @(fontSize(font));
+    CFStringRef name = CGFontCopyPostScriptName(cgFont);
+    if (name) {
+        attributes[(id)kCTFontNameAttribute] = (id)name;
+        CFRelease(name);
+    }
+    return CTFontDescriptorCreateWithAttributes((CFDictionaryRef)attributes);
 }
 
 CFTypeRef CTFontCopyAttribute(CTFontRef font, CFStringRef attribute)
@@ -341,9 +354,9 @@ CGFloat CTFontGetSize(CTFontRef self) {
     return fontSize(self);
 }
 
+// Fonts are created without a matrix here (the matrix arguments of the creation functions are not kept).
 CGAffineTransform CTFontGetMatrix(CTFontRef font)
 {
-    printf("STUB %s\n", __PRETTY_FUNCTION__);
     return CGAffineTransformIdentity;
 }
 
@@ -512,8 +525,7 @@ CGFloat CTFontGetLeading(CTFontRef self) {
 
 unsigned int CTFontGetUnitsPerEm(CTFontRef font)
 {
-    printf("STUB %s\n", __PRETTY_FUNCTION__);
-    return 0;
+    return CGFontGetUnitsPerEm(graphicsFont(font));
 }
 
 CFIndex CTFontGetGlyphCount(CTFontRef font) {
@@ -626,8 +638,31 @@ CGRect CTFontGetBoundingRectsForGlyphs(CTFontRef font, CTFontOrientation orienta
                                        const CGGlyph *glyphs, CGRect *boundingRects,
                                        CFIndex count)
 {
-    printf("STUB %s\n", __PRETTY_FUNCTION__);
-    return CGRectMake(0, 0, 0, 0);
+    // The control box of each glyph's outline, read unscaled and unhinted and scaled to the font size, so
+    // the answer does not depend on (or change) the size the face is currently set to.
+    // ponytail: the orientation is ignored (horizontal boxes always); bitmap-only glyphs get an empty box.
+    CGRect all = CGRectNull;
+    O2Font_freetype *o2Font = (O2Font_freetype *)graphicsFont(font);
+    @synchronized((id)o2Font) {
+        FT_Face face = faceForFont(font);
+        double scale = (face != NULL && face->units_per_EM > 0) ? fontSize(font) / face->units_per_EM : 0;
+        for (CFIndex i = 0; i < count; i++) {
+            CGRect box = CGRectZero;
+            if (face != NULL &&
+                FT_Load_Glyph(face, glyphs[i], FT_LOAD_NO_SCALE | FT_LOAD_NO_BITMAP) == 0 &&
+                face->glyph->format == FT_GLYPH_FORMAT_OUTLINE && face->glyph->outline.n_points > 0) {
+                FT_BBox cbox;
+                FT_Outline_Get_CBox(&face->glyph->outline, &cbox);
+                box = CGRectMake(cbox.xMin * scale, cbox.yMin * scale,
+                                 (cbox.xMax - cbox.xMin) * scale, (cbox.yMax - cbox.yMin) * scale);
+            }
+            if (boundingRects != NULL)
+                boundingRects[i] = box;
+            if (!CGRectIsEmpty(box))
+                all = CGRectUnion(all, box);
+        }
+    }
+    return CGRectIsNull(all) ? CGRectZero : all;
 }
 
 double CTFontGetAdvancesForGlyphs(CTFontRef font, CTFontOrientation orientation,
