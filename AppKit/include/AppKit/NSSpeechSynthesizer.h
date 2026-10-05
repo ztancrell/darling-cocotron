@@ -41,7 +41,9 @@ APPKIT_EXPORT NSSpeechPropertyKey const NSSpeechRateProperty;
 APPKIT_EXPORT NSSpeechPropertyKey const NSSpeechPitchBaseProperty;
 APPKIT_EXPORT NSSpeechPropertyKey const NSSpeechVolumeProperty;
 
-@interface NSSpeechSynthesizer : NSObject
+@interface NSSpeechSynthesizer : NSObject {
+    NSString *_voice;
+}
 
 // The voice query API. There is no speech synthesis engine here, so the voice list is
 // empty and per-voice lookups come back empty rather than reporting voices that cannot

@@ -31,9 +31,7 @@ NSSpeechPropertyKey const NSSpeechRateProperty = @"rate";
 NSSpeechPropertyKey const NSSpeechPitchBaseProperty = @"pbas";
 NSSpeechPropertyKey const NSSpeechVolumeProperty = @"volm";
 
-@implementation NSSpeechSynthesizer {
-    NSString *_voice;
-}
+@implementation NSSpeechSynthesizer
 
 + (NSArray *) availableVoices
 {
