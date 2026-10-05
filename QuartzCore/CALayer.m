@@ -313,6 +313,10 @@ static void autoresizeAxis(CGFloat *origin, CGFloat *size, CGFloat oldSuper,
 }
 
 - (void) setContents: (id) value {
+    if (getenv("DARLING_IOSURFACE_TRACE") != NULL &&
+        [value isKindOfClass: NSClassFromString(@"IOSurface")])
+        fprintf(stderr, "CALayer[%d]: %p contents = surface %p, bounds %gx%g, context %p\n",
+                getpid(), self, value, _bounds.size.width, _bounds.size.height, _context);
     value = [value retain];
     [_contents release];
     _contents = value;
