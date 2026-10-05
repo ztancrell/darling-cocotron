@@ -14,6 +14,15 @@
 
 NSString *const kCARendererColorSpace = @"kCARendererColorSpace";
 
+// The part of IOSurface this file uses; see CATexImage2DIOSurface.
+@protocol CAIOSurfaceContents
+- (OSType) pixelFormat;
+- (NSInteger) width;
+- (NSInteger) height;
+- (NSInteger) bytesPerRow;
+- (void *) baseAddress;
+@end
+
 @implementation CARenderer
 
 - (CGRect) bounds {
@@ -321,6 +330,26 @@ void CATexImage2DCGImage(CGImageRef image) {
     CFRelease(data);
 }
 
+// Layer contents that are an IOSurface (how Chromium hands over a finished frame). The class is
+// looked up by name so that QuartzCore does not have to link IOSurface.framework.
+// Only 32-bit BGRA is understood; returns NO for anything else and uploads nothing.
+static BOOL CATexImage2DIOSurface(id<CAIOSurfaceContents> surface) {
+    if ([surface pixelFormat] != 'BGRA')
+        return NO;
+
+    NSInteger width = [surface width], height = [surface height];
+    NSInteger bytesPerRow = [surface bytesPerRow];
+    const void *pixels = [surface baseAddress];
+    if (pixels == NULL || width <= 0 || height <= 0 || bytesPerRow < width * 4)
+        return NO;
+
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, bytesPerRow / 4);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA,
+                 GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    return YES;
+}
+
 // Premultiplied colour (the blend function is GL_ONE, GL_ONE_MINUS_SRC_ALPHA).
 static BOOL setPremultipliedColor(CGColorRef color, CGFloat opacity) {
     if (color == NULL)
@@ -452,7 +481,14 @@ static void roundedRectOutline(CGRect r, CGFloat radius, GLfloat *xy) {
     // Upload when the texture object doesn't exist yet (check before binding:
     // glBindTexture creates it) or when the layer got new contents since the
     // last upload (a layer-backed NSView sets a new image on every display).
-    BOOL upload = texture == 0 || glIsTexture(texture) == GL_FALSE ||
+    // ponytail: a surface is uploaded on every draw, because its pixels change
+    // without the layer getting a new contents object. Compare the surface's
+    // seed, or texture from the surface directly, if this shows up in profiles.
+    Class surfaceClass = NSClassFromString(@"IOSurface");
+    BOOL isSurface = surfaceClass != Nil &&
+                     [(id) image isKindOfClass: surfaceClass];
+    BOOL upload = isSurface || texture == 0 ||
+                  glIsTexture(texture) == GL_FALSE ||
                   [layer _textureContents] != layer.contents;
 
     glEnable(GL_TEXTURE_2D);
@@ -462,7 +498,10 @@ static void roundedRectOutline(CGRect r, CGFloat radius, GLfloat *xy) {
         glBindTexture(GL_TEXTURE_2D, texture);
 
     if (upload) {
-        CATexImage2DCGImage(image);
+        if (isSurface)
+            CATexImage2DIOSurface((id) image);
+        else
+            CATexImage2DCGImage(image);
         [layer _setTextureContents: layer.contents];
 
         GLint minFilter = interpolationFromName(layer.minificationFilter);
