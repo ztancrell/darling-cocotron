@@ -33,6 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <ft2build.h>
 #import FT_FREETYPE_H
 #import FT_OUTLINE_H
+#import FT_TRUETYPE_TABLES_H
 #ifdef DARLING
 #undef __linux__
 #endif
@@ -346,16 +347,74 @@ CGAffineTransform CTFontGetMatrix(CTFontRef font)
     return CGAffineTransformIdentity;
 }
 
+// What the font file says about itself: the face's style flags, and the weight and width classes of
+// its OS/2 table and the italic angle of its post table when it has them.
+struct FontTraits {
+    CTFontSymbolicTraits symbolic;
+    double weight, width, slant;
+};
+
+static struct FontTraits fontTraits(CTFontRef font)
+{
+    struct FontTraits traits = {0, 0.0, 0.0, 0.0};
+    O2Font_freetype *o2Font = (O2Font_freetype *)graphicsFont(font);
+    if (![(id)o2Font isKindOfClass:[O2Font_freetype class]])
+        return traits;
+    @synchronized((id)o2Font) {   // the same lock the font's own FreeType calls take
+        FT_Face face = O2FontFreeTypeFace(o2Font);
+        if (face == NULL)
+            return traits;
+        int weightClass = (face->style_flags & FT_STYLE_FLAG_BOLD) ? 700 : 400, widthClass = 5;
+        TT_OS2 *os2 = FT_Get_Sfnt_Table(face, FT_SFNT_OS2);
+        if (os2 != NULL && os2->version != 0xFFFF) {
+            if (os2->usWeightClass >= 1 && os2->usWeightClass <= 1000)
+                weightClass = os2->usWeightClass;
+            if (os2->usWidthClass >= 1 && os2->usWidthClass <= 9)
+                widthClass = os2->usWidthClass;
+        }
+        TT_Postscript *post = FT_Get_Sfnt_Table(face, FT_SFNT_POST);
+        // italicAngle is 16.16 degrees, negative for a forward lean; the trait is 1.0 at 30 degrees forward.
+        if (post != NULL)
+            traits.slant = -(post->italicAngle / 65536.0) / 30.0;
+        if (traits.slant > 1.0) traits.slant = 1.0;
+        if (traits.slant < -1.0) traits.slant = -1.0;
+
+        // The NSFontWeight value of each hundred, ultralight (100) to black (900).
+        static const double weights[] = {-0.8, -0.6, -0.4, 0.0, 0.23, 0.3, 0.4, 0.56, 0.62};
+        int index = (weightClass + 50) / 100 - 1;
+        traits.weight = weights[index < 0 ? 0 : index > 8 ? 8 : index];
+        // ponytail: linear in the width class, 0.1 per step. macOS's exact values per class are not
+        // documented; measure them on a Mac if something depends on more than the sign.
+        traits.width = (widthClass - 5) * 0.1;
+
+        if ((face->style_flags & FT_STYLE_FLAG_ITALIC) || traits.slant > 0.0)
+            traits.symbolic |= kCTFontTraitItalic;
+        if (weightClass >= 600)
+            traits.symbolic |= kCTFontTraitBold;
+        if (widthClass < 5)
+            traits.symbolic |= kCTFontTraitCondensed;
+        if (widthClass > 5)
+            traits.symbolic |= kCTFontTraitExpanded;
+        if (FT_IS_FIXED_WIDTH(face))
+            traits.symbolic |= kCTFontTraitMonoSpace;
+    }
+    return traits;
+}
+
 CTFontSymbolicTraits CTFontGetSymbolicTraits(CTFontRef font)
 {
-    printf("STUB %s\n", __PRETTY_FUNCTION__);
-    return kCTFontTraitItalic;
+    return fontTraits(font).symbolic;
 }
 
 CFDictionaryRef CTFontCopyTraits(CTFontRef font)
 {
-    printf("STUB %s\n", __PRETTY_FUNCTION__);
-    return nil;
+    struct FontTraits traits = fontTraits(font);
+    return (CFDictionaryRef)[@{
+        (id)kCTFontSymbolicTrait: @(traits.symbolic),
+        (id)kCTFontWeightTrait: @(traits.weight),
+        (id)kCTFontWidthTrait: @(traits.width),
+        (id)kCTFontSlantTrait: @(traits.slant),
+    } retain];
 }
 
 CFArrayRef CTFontCopyDefaultCascadeListForLanguages(CTFontRef font, CFArrayRef languagePrefList)
