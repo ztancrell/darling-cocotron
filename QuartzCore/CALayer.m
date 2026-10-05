@@ -183,11 +183,77 @@ static char swiftUIViewTestPropertiesAssociationKey;
     }
 
     BOOL sizeChanged = !CGSizeEqualToSize(_bounds.size, value.size);
+    CGSize oldSize = _bounds.size;
     _bounds = value;
-    if (sizeChanged)
+    if (sizeChanged) {
+        [self resizeSublayersWithOldSize: oldSize];
         [self setNeedsLayout];
+    }
     if (sizeChanged && _needsDisplayOnBoundsChange)
         [self setNeedsDisplay];
+}
+
+- (unsigned int) autoresizingMask {
+    return _autoresizingMask;
+}
+
+- (void) setAutoresizingMask: (unsigned int) value {
+    _autoresizingMask = value;
+}
+
+// One axis of autoresizing: the change in the superlayer's extent is shared
+// among the flexible parts (margin before, size, margin after) in proportion
+// to their old extents, or equally when those are all zero.
+static void autoresizeAxis(CGFloat *origin, CGFloat *size, CGFloat oldSuper,
+                           CGFloat newSuper, BOOL minFlexible,
+                           BOOL sizeFlexible, BOOL maxFlexible)
+{
+    CGFloat delta = newSuper - oldSuper;
+    int count = minFlexible + sizeFlexible + maxFlexible;
+
+    if (count == 0 || delta == 0)
+        return;
+
+    CGFloat minPart = minFlexible ? *origin : 0;
+    CGFloat sizePart = sizeFlexible ? *size : 0;
+    CGFloat maxPart = maxFlexible ? oldSuper - *origin - *size : 0;
+    CGFloat total = minPart + sizePart + maxPart;
+
+    if (total > 0) {
+        *origin += delta * minPart / total;
+        *size += delta * sizePart / total;
+    } else {
+        if (minFlexible)
+            *origin += delta / count;
+        if (sizeFlexible)
+            *size += delta / count;
+    }
+    if (*size < 0)
+        *size = 0;
+}
+
+- (void) resizeWithOldSuperlayerSize: (CGSize) oldSize {
+    if (_autoresizingMask == kCALayerNotSizable || _superlayer == nil)
+        return;
+
+    CGSize newSize = [_superlayer bounds].size;
+    CGRect frame = [self frame];
+
+    autoresizeAxis(&frame.origin.x, &frame.size.width, oldSize.width,
+                   newSize.width, (_autoresizingMask & kCALayerMinXMargin) != 0,
+                   (_autoresizingMask & kCALayerWidthSizable) != 0,
+                   (_autoresizingMask & kCALayerMaxXMargin) != 0);
+    autoresizeAxis(&frame.origin.y, &frame.size.height, oldSize.height,
+                   newSize.height,
+                   (_autoresizingMask & kCALayerMinYMargin) != 0,
+                   (_autoresizingMask & kCALayerHeightSizable) != 0,
+                   (_autoresizingMask & kCALayerMaxYMargin) != 0);
+    [self setFrame: frame];
+}
+
+- (void) resizeSublayersWithOldSize: (CGSize) oldSize {
+    for (CALayer *child in [[_sublayers copy] autorelease])
+        [child resizeWithOldSuperlayerSize: oldSize];
 }
 
 - (CGRect) frame {
