@@ -370,7 +370,10 @@ static BOOL _allowsAutomaticWindowTabbing;
     _backingType = backing;
     _isDeferred = defer;
 
-    _frame = [self frameRectForContentRect: contentRect];
+    // Use the class methods here and below, not the instance ones: a subclass may override those
+    // and rely on state it only sets up after this initializer returns.
+    _frame = [[self class] frameRectForContentRect: contentRect
+                                         styleMask: styleMask];
     _frame = [self constrainFrameRect: _frame toScreen: [NSScreen mainScreen]];
     _savedFrame = _frame;
 
@@ -402,7 +405,9 @@ static BOOL _allowsAutomaticWindowTabbing;
     [_backgroundView _setWindow: self];
     [_backgroundView setNextResponder: self];
 
-    NSRect contentViewFrame = [self contentRectForFrameRect: backgroundFrame];
+    NSRect contentViewFrame =
+            [[self class] contentRectForFrameRect: backgroundFrame
+                                        styleMask: styleMask];
     _contentView = [[NSView alloc] initWithFrame: contentViewFrame];
     [_contentView setAutoresizesSubviews: YES];
     [_contentView
