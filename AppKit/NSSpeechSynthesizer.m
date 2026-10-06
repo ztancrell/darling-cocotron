@@ -33,9 +33,18 @@ NSSpeechPropertyKey const NSSpeechVolumeProperty = @"volm";
 
 @implementation NSSpeechSynthesizer
 
+// There are no voices, and so no default one. Both answers are nil rather than an empty list and nil:
+// callers written for macOS, where a default voice always exists, put the default voice at the front
+// of a copy of this list without checking it (Chromium's TtsPlatformImplMac::GetVoices), and inserting
+// nil into a real array raises. With no list at all those calls do nothing.
 + (NSArray *) availableVoices
 {
-    return @[];
+    return nil;
+}
+
++ (NSString *) defaultVoice
+{
+    return nil;
 }
 
 + (NSString *) voiceAtIndex: (NSInteger) index
