@@ -317,9 +317,18 @@ static void autoresizeAxis(CGFloat *origin, CGFloat *size, CGFloat oldSuper,
         [value isKindOfClass: NSClassFromString(@"IOSurface")])
         fprintf(stderr, "CALayer[%d]: %p contents = surface %p, bounds %gx%g, context %p\n",
                 getpid(), self, value, _bounds.size.width, _bounds.size.height, _context);
+    // A surface on screen counts as in use, as it does on macOS where the window server holds it.
+    // Whoever draws into surfaces asks (IOSurfaceIsInUse) before reusing one for the next frame.
+    if (value != _contents) {
+        if ([value respondsToSelector: @selector(incrementUseCount)])
+            [value incrementUseCount];
+        if ([_contents respondsToSelector: @selector(decrementUseCount)])
+            [_contents decrementUseCount];
+    }
     value = [value retain];
     [_contents release];
     _contents = value;
+    [_context startTimerIfNeeded];
 }
 
 - (CGFloat) contentsScale {
@@ -711,6 +720,9 @@ static void autoresizeAxis(CGFloat *origin, CGFloat *size, CGFloat oldSuper,
     if (_borderColor)
         CGColorRelease(_borderColor);
     [_textureContents release];
+    if ([_contents respondsToSelector: @selector(decrementUseCount)])
+        [_contents decrementUseCount];
+    [_contents release];
     [super dealloc];
 }
 
