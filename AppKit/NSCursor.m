@@ -364,11 +364,22 @@ static NSMutableArray *_cursorStack = nil;
     [[NSDisplay currentDisplay] unhideCursor];
 }
 
+// Applications hide the pointer this way while the user types. -[NSWindow sendEvent:] reports
+// pointer motion through +_pointerMoved, which brings it back.
+static BOOL hiddenUntilMouseMoves = NO;
+
 + (void) setHiddenUntilMouseMoves: (BOOL) flag {
+    if (flag == hiddenUntilMouseMoves)
+        return;
+    hiddenUntilMouseMoves = flag;
     if (flag)
         [self hide];
     else
         [self unhide];
+}
+
++ (void) _pointerMoved {
+    [self setHiddenUntilMouseMoves: NO];
 }
 
 - initWithImage: (NSImage *) image

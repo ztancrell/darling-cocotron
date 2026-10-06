@@ -46,6 +46,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
     return _clickCount;
 }
 
+// NSEventSubtypeMouseEvent: an ordinary mouse, not a tablet or a touch. Callers ask this of every
+// mouse event to tell those apart (Chromium does), so it must answer rather than raise.
+- (short) subtype {
+    return 0;
+}
+
 - (NSInteger) eventNumber {
     return _eventNumber;
 }

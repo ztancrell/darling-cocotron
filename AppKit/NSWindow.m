@@ -21,6 +21,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. */
 #import <AppKit/NSApplication.h>
 #import <AppKit/NSColor.h>
 #import <AppKit/NSCursor.h>
+
+@interface NSCursor (NSWindowPointerMotion)
++ (void) _pointerMoved;
+@end
 #import <AppKit/NSDisplay.h>
 #import <AppKit/NSDraggingManager.h>
 #import <AppKit/NSEvent.h>
@@ -2513,6 +2517,17 @@ static BOOL _allowsAutomaticWindowTabbing;
 
     BOOL shouldValidateToolbarItems = YES;
     // OK let's see if anyone else wants it.
+    switch ([event type]) {
+    case NSMouseMoved:
+    case NSLeftMouseDragged:
+    case NSRightMouseDragged:
+    case NSOtherMouseDragged:
+        [NSCursor _pointerMoved];
+        break;
+    default:
+        break;
+    }
+
     switch ([event type]) {
 
     case NSLeftMouseDown: {
