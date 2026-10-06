@@ -67,6 +67,23 @@ NSSpeechPropertyKey const NSSpeechVolumeProperty = @"volm";
     return _voice;
 }
 
+// Nothing here can speak, so nothing ever is speaking. These need real answers: the catch-all below
+// returns nothing, and a caller reading a BOOL from it (Chromium's Edit menu validation) gets whatever
+// was left in the register.
+- (BOOL) isSpeaking
+{
+    return NO;
+}
+
++ (BOOL) isAnyApplicationSpeaking
+{
+    return NO;
+}
+
+- (void) stopSpeaking
+{
+}
+
 - (void) dealloc
 {
     [_voice release];
