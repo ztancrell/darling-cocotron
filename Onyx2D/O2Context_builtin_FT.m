@@ -215,8 +215,10 @@ static void renderFreeTypeBitmap(O2Context_builtin_FT *self, O2Surface *surface,
         return;
     }
 
-    if ((ftError =
-                 FT_Set_Char_Size(face, 0, fontSize.height * 64, 72.0, 72.0))) {
+    @synchronized(font) {   // the face is shared; -rasterizeGlyph:pointSize: sizes it again itself
+        ftError = FT_Set_Char_Size(face, 0, fontSize.height * 64, 72.0, 72.0);
+    }
+    if (ftError) {
         NSLog(@"FT_Set_Char_Size returned %d", ftError);
         O2PaintRelease(paint);
         O2SurfaceUnlock(_surface);

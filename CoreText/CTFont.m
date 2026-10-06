@@ -602,25 +602,29 @@ static int glyphPathCubicTo(const FT_Vector *control1, const FT_Vector *control2
 CGPathRef CTFontCreatePathForGlyph(CTFontRef self, CGGlyph glyph,
                                    CGAffineTransform *xform)
 {
-    FT_Face face = faceForFont(self);
-
-    // Unscaled outlines are in font units, so the shared face's size is left alone.
-    if (FT_Load_Glyph(face, glyph, FT_LOAD_NO_SCALE) != 0 ||
-        face->glyph->format != FT_GLYPH_FORMAT_OUTLINE)
-        return NULL;
-
     CGFloat unit = scaled(self, 1);
     CGAffineTransform matrix = CGAffineTransformMakeScale(unit, unit);
     if (xform != NULL)
         matrix = CGAffineTransformConcat(matrix, *xform);
 
-    GlyphPathBuilder builder = {CGPathCreateMutable(), &matrix, NO};
+    GlyphPathBuilder builder = {NULL, &matrix, NO};
     const FT_Outline_Funcs funcs = {glyphPathMoveTo, glyphPathLineTo, glyphPathConicTo,
                                     glyphPathCubicTo, 0, 0};
 
-    if (FT_Outline_Decompose(&face->glyph->outline, &funcs, &builder) != 0) {
-        CGPathRelease(builder.path);
-        return NULL;
+    // The face and its one glyph slot are shared by every user of the font, on any thread.
+    @synchronized((id)graphicsFont(self)) {
+        FT_Face face = faceForFont(self);
+
+        // Unscaled outlines are in font units, so the shared face's size is left alone.
+        if (FT_Load_Glyph(face, glyph, FT_LOAD_NO_SCALE) != 0 ||
+            face->glyph->format != FT_GLYPH_FORMAT_OUTLINE)
+            return NULL;
+
+        builder.path = CGPathCreateMutable();
+        if (FT_Outline_Decompose(&face->glyph->outline, &funcs, &builder) != 0) {
+            CGPathRelease(builder.path);
+            return NULL;
+        }
     }
     if (builder.contourOpen)
         CGPathCloseSubpath(builder.path);
@@ -669,16 +673,19 @@ double CTFontGetAdvancesForGlyphs(CTFontRef font, CTFontOrientation orientation,
                                 const CGGlyph *glyphs, CGSize *advances,
                                 CFIndex count)
 {
-    FT_Face face = faceForFont(font);
-    FT_Set_Pixel_Sizes(face, fontSize(font), fontSize(font));
-
     double sum = 0;
-    for (CFIndex i = 0; i < count; i++) {
-        FT_Load_Glyph(face, glyphs[i], FT_LOAD_DEFAULT);
-        CGSize advance = CGSizeMake(face->glyph->advance.x / 64.0, face->glyph->advance.y / 64.0);
-        if (advances != NULL)
-            advances[i] = advance;
-        sum += advance.width;
+    // Setting the size and loading glyphs both rewrite the shared face (hinting runs in it).
+    @synchronized((id)graphicsFont(font)) {
+        FT_Face face = faceForFont(font);
+        FT_Set_Pixel_Sizes(face, fontSize(font), fontSize(font));
+
+        for (CFIndex i = 0; i < count; i++) {
+            FT_Load_Glyph(face, glyphs[i], FT_LOAD_DEFAULT);
+            CGSize advance = CGSizeMake(face->glyph->advance.x / 64.0, face->glyph->advance.y / 64.0);
+            if (advances != NULL)
+                advances[i] = advance;
+            sum += advance.width;
+        }
     }
     return sum;
 }

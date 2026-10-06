@@ -1,5 +1,6 @@
 #import <Onyx2D/O2Font_freetype.h>
 #ifdef FREETYPE_PRESENT
+#include <pthread.h>
 #import <Onyx2D/O2Encoding.h>
 #import <string.h>
 #include FT_TRUETYPE_TABLES_H
@@ -18,16 +19,44 @@ O2FontRef O2FontCreateWithDataProvider_platform(O2DataProviderRef provider) {
 
 #endif
 
+// FreeType lets threads use different faces at once, but creating and destroying faces changes the
+// library they share, so those calls take this lock. Glyph work on one face takes the font's own lock.
+static pthread_mutex_t libraryLock = PTHREAD_MUTEX_INITIALIZER;
+
 FT_Library O2FontSharedFreeTypeLibrary() {
     static FT_Library library = NULL;
 
+    pthread_mutex_lock(&libraryLock);
     if (library == NULL) {
         if (FT_Init_FreeType(&library) != 0) {
             NSLog(@"FT_Init_FreeType failed");
         }
     }
+    pthread_mutex_unlock(&libraryLock);
 
     return library;
+}
+
+static FT_Error newFace(const char *path, FT_Long index, FT_Face *face) {
+    FT_Library library = O2FontSharedFreeTypeLibrary();
+    pthread_mutex_lock(&libraryLock);
+    FT_Error error = FT_New_Face(library, path, index, face);
+    pthread_mutex_unlock(&libraryLock);
+    return error;
+}
+
+static FT_Error newMemoryFace(const void *bytes, size_t length, FT_Face *face) {
+    FT_Library library = O2FontSharedFreeTypeLibrary();
+    pthread_mutex_lock(&libraryLock);
+    FT_Error error = FT_New_Memory_Face(library, bytes, length, 0, face);
+    pthread_mutex_unlock(&libraryLock);
+    return error;
+}
+
+static void doneFace(FT_Face face) {
+    pthread_mutex_lock(&libraryLock);
+    FT_Done_Face(face);
+    pthread_mutex_unlock(&libraryLock);
 }
 
 static void addAppFont(FcConfig *config, NSString *path) {
@@ -142,18 +171,17 @@ O2FontRef O2FontCreateWithCodePointCoverage(const uint32_t *codePoints,
         return nil;
     }
     FT_Face face = NULL;
-    FT_Error error = FT_New_Face(O2FontSharedFreeTypeLibrary(),
-                                 (const char *)filename, faceIndex, &face);
+    FT_Error error = newFace((const char *)filename, faceIndex, &face);
     FcPatternDestroy(match);
     if (error != 0)
         return nil;
     if (FT_Select_Charmap(face, FT_ENCODING_UNICODE) != 0) {
-        FT_Done_Face(face);
+        doneFace(face);
         return nil;
     }
     for (size_t index = 0; index < count; ++index) {
         if (FT_Get_Char_Index(face, codePoints[index]) == 0) {
-            FT_Done_Face(face);
+            doneFace(face);
             return nil;
         }
     }
@@ -196,8 +224,7 @@ O2FontRef O2FontCreateWithCodePointCoverage(const uint32_t *codePoints,
     size_t length = [provider length];
 
     FT_Face face;
-    int error = FT_New_Memory_Face(O2FontSharedFreeTypeLibrary(), bytes, length,
-                                   0, &face);
+    int error = newMemoryFace(bytes, length, &face);
 
     if (error != 0) {
         NSLog(@"FT_New_Memory_Face() = %d", error);
@@ -239,8 +266,7 @@ O2FontRef O2FontCreateWithCodePointCoverage(const uint32_t *codePoints,
     }
 
     FT_Face face;
-    FT_Error error = FT_New_Face(O2FontSharedFreeTypeLibrary(),
-                                 [freetypePath fileSystemRepresentation], 0, &face);
+    FT_Error error = newFace([freetypePath fileSystemRepresentation], 0, &face);
 
     if (error != 0) {
         NSLog(@"FT_New_Face() = %d", error);
@@ -306,7 +332,7 @@ O2FontRef O2FontCreateWithCodePointCoverage(const uint32_t *codePoints,
 }
 
 - (void) dealloc {
-    FT_Done_Face(_face);
+    doneFace(_face);
     [_glyphCache release];
     [_macRomanEncoding release];
     [_macExpertEncoding release];
@@ -391,14 +417,19 @@ FT_Face O2FontFreeTypeFace(O2Font_freetype *self) {
 }
 
 - (void) fetchAdvances {
-    FT_Set_Char_Size(_face, 0, _unitsPerEm * 64, 72, 72);
+    @synchronized(self) {
+        if (_advances != NULL)
+            return;
+        FT_Set_Char_Size(_face, 0, _unitsPerEm * 64, 72, 72);
 
-    _advances = NSZoneMalloc(NULL, sizeof(NSInteger) * _numberOfGlyphs);
+        NSInteger *advances = NSZoneMalloc(NULL, sizeof(NSInteger) * _numberOfGlyphs);
 
-    for (O2Glyph glyph = 0; glyph < _numberOfGlyphs; glyph++) {
-        FT_Load_Glyph(_face, glyph, FT_LOAD_DEFAULT);
+        for (O2Glyph glyph = 0; glyph < _numberOfGlyphs; glyph++) {
+            FT_Load_Glyph(_face, glyph, FT_LOAD_DEFAULT);
 
-        _advances[glyph] = _face->glyph->advance.x / (O2Float)(2 << 5);
+            advances[glyph] = _face->glyph->advance.x / (O2Float)(2 << 5);
+        }
+        _advances = advances;
     }
 }
 
@@ -520,7 +551,9 @@ FT_Face O2FontFreeTypeFace(O2Font_freetype *self) {
             return [[cached retain] autorelease];
         }
 
-        if (FT_Load_Glyph(_face, glyph, FT_LOAD_DEFAULT) != 0) {
+        // Sized here, under the lock, so another thread's size cannot land between the two calls.
+        if (FT_Set_Char_Size(_face, 0, pointSize * 64, 72.0, 72.0) != 0 ||
+            FT_Load_Glyph(_face, glyph, FT_LOAD_DEFAULT) != 0) {
             return nil;
         }
 
