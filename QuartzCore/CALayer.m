@@ -101,8 +101,18 @@ static char swiftUIViewTestPropertiesAssociationKey;
     return _sublayers;
 }
 
+// The superlayer pointer is not retained. A sublayer that stops being one (dropped from the list, or
+// this layer is freed while something else still holds the sublayer) must not keep pointing here.
+- (void) _orphanSublayers {
+    for (CALayer *layer in _sublayers) {
+        if ([layer superlayer] == self)
+            [layer _setSuperLayer: nil];
+    }
+}
+
 - (void) setSublayers: (NSArray *) sublayers {
     sublayers = [sublayers copy];
+    [self _orphanSublayers];
     [_sublayers release];
     _sublayers = sublayers;
     [_sublayers makeObjectsPerformSelector: @selector(_setSuperLayer:)
@@ -696,6 +706,7 @@ static void autoresizeAxis(CGFloat *origin, CGFloat *size, CGFloat oldSuper,
 }
 
 - (void) dealloc {
+    [self _orphanSublayers];
     [_sublayers release];
     [_name release];
     [_layoutManager release];
