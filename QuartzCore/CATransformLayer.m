@@ -1,9 +1,18 @@
-#import <QuartzCore/CALayer.h>
+#import <Foundation/NSObject.h>
 
-// ponytail: an ordinary layer. Its one difference on macOS, that sublayers keep their depth instead
-// of being flattened into its plane, means nothing to a renderer that draws in two dimensions.
-@interface CATransformLayer : CALayer
+@interface CATransformLayer : NSObject
 @end
 
 @implementation CATransformLayer
+
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
+{
+	return [NSMethodSignature signatureWithObjCTypes: "v@:"];
+}
+
+- (void)forwardInvocation:(NSInvocation *)anInvocation
+{
+	NSLog(@"Stub called: %@ in %@", NSStringFromSelector([anInvocation selector]), [self class]);
+}
+
 @end
